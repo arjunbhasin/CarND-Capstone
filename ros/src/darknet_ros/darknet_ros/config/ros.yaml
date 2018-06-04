@@ -1,7 +1,7 @@
 subscribers:
 
   camera_reading:
-    topic: /image_colo
+    topic: /image_color
     queue_size: 1
 
 actions:
