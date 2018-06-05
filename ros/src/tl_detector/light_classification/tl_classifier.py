@@ -37,14 +37,14 @@ class TLClassifier(object):
             # Convert to HSV
             hsv_bb_img = cv2.cvtColor(bb_image, cv2.COLOR_BGR2HSV)
 
-            # Red Color ranges
-            frame_threshed_red1 = cv2.inRange(hsv_bb_img, (0,70,50), (10,255,255)) 
-            frame_threshed_red2 = cv2.inRange(hsv_bb_img, (170,70,50), (180,255,255)) 
+            # Red Color ranges (Red has two ranges)
+            frame_threshed_red1 = cv2.inRange(hsv_bb_img, (0, 70, 50), (10, 255, 255)) 
+            frame_threshed_red2 = cv2.inRange(hsv_bb_img, (170, 70, 50), (180, 255, 255)) 
 
             # Yellow Color range
-            frame_threshed_yellow = cv2.inRange(hsv_bb_img, (40.0/360*255,100,100), (66.0/360*255,255,255)) 
+            frame_threshed_yellow = cv2.inRange(hsv_bb_img, (40.0/360*255, 100, 100), (66.0/360*255, 255, 255)) 
             # Green color range
-            frame_threshed_green = cv2.inRange(hsv_bb_img, (90.0/360*255,100,100), (140.0/360*255,255,255)) 
+            frame_threshed_green = cv2.inRange(hsv_bb_img, (90.0/360*255, 100, 100), (140.0/360*255, 255, 255)) 
            
             
             # If more than a certain number of pixels are red

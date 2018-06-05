@@ -48,9 +48,7 @@ class TLDetector(object):
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
         
-        # darknet_ros messages
-        #sub7 = rospy.Subscriber('/darknet_ros/found_object', Int8, self.num_obj_found_cb)
-        #sub8 = rospy.Subscriber('/darknet_ros/detection_image', Image, self.detected_image_cb)
+        # darknet_ros message
         sub9 = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.detected_bb_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
@@ -130,9 +128,6 @@ class TLDetector(object):
                 # If diagonal size of bounding box is more than 85px
                 if math.sqrt((bb.xmin - bb.xmax)**2 + (bb.ymin - bb.ymax)**2) >= 85.0:
                     self.TL_BB_list.append(bb)
-
-        # For diagnostics
-        #print (self.TL_BB_list)
 
 
     # Similar to function in waypoint_update.py
