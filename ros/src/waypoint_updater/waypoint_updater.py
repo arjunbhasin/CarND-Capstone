@@ -150,7 +150,7 @@ class WaypointUpdater(object):
 
     # Important function
     # Warning: Do not modify the original base_waypoints list (that message comes only once)
-    def decelerate_waypoints(self, base_waypoints, closest_idx):
+    def decelerate_waypoints(self, waypoints, closest_idx):
         temp = []
         for i , wp in enumerate(waypoints):
             p = Waypoint()
