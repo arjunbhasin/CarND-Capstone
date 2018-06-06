@@ -1,0 +1,53 @@
+# Site video version
+    def detected_bb_cb(self, msg):
+        # Clear the list
+        self.TL_BB_list = []
+        for bb in msg.bounding_boxes:
+            # Bounding Box class should be 'traffic light' with probability >= 40%
+            if str(bb.Class) == 'traffic light' and bb.probability >= 0.40:
+                # Get the camera image
+                cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+                # Crop image
+                bb_image = cv_image[bb.ymin:bb.ymax, bb.xmin:bb.xmax]
+                # Get height and width
+                height, width, channels = bb_image.shape
+
+                # Create mask 
+                mask = np.zeros((height, width), np.uint8)
+
+                # Draw partition lines
+                #cv2.line(bb_image, (0, height//3), (width, height//3), (0,0,0), 1)
+                #cv2.line(bb_image, (0, 2*height//3), (width, 2*height//3), (0,0,0), 1)
+                
+                width_offset = 3
+                height_offset = 3
+                cv2.ellipse(mask, (width//2, 1*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+                cv2.ellipse(mask, (width//2, 3*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+                cv2.ellipse(mask, (width//2, 5*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+
+                bb_image = cv2.cvtColor(bb_image, cv2.COLOR_BGR2GRAY)
+
+                # Apply mask
+                bb_image = np.multiply(bb_image, mask)
+
+                # Threhold the grayscale image
+                bb_image = cv2.inRange(bb_image, 225, 255)
+
+                # Partition into Red, Yellow and Green Areas
+                red_area = bb_image[0:height//3, 0:width]
+                yellow_area = bb_image[height//3: 2*height//3, 0:width]
+                green_area = bb_image[2*height//3: height, 0:width,]
+
+                red_count = cv2.countNonZero(red_area)
+                yellow_count = cv2.countNonZero(yellow_area)
+                green_count = cv2.countNonZero(green_area)
+
+                #print (red_count, yellow_count, green_count)
+                if red_count > yellow_count and red_count > green_count:
+                    print ('Red Light Detected!')
+                elif yellow_count > red_count and yellow_count > green_count:
+                    print ('Yellow Light Detected!')
+                elif green_count > red_count and green_count > yellow_count:
+                    print ('Green Light Detected!')
+                else:
+                    print ('Warning! Unable to determine Light state')

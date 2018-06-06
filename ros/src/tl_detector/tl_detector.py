@@ -46,16 +46,19 @@ class TLDetector(object):
         rely on the position of the light and the camera image to predict it.
         '''
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
+        sub4 = rospy.Subscriber('/image_color', Image, self.image_cb)
         
         # darknet_ros message
-        sub9 = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.detected_bb_cb)
+        sub5 = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.detected_bb_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
         # Publish the index of the waypoint where we have to stop
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+
+        # WARNING! Only use during testing in site mode (for diagnostics)
+        #self.cropped_tl_bb_pub = rospy.Publisher('/cropped_bb', Image, queue_size=1)
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -82,7 +85,7 @@ class TLDetector(object):
             self.waypoint_tree = KDTree(self.waypoints_2d)
 
 
-    # Warning: lights state will not be available in real life, use only for diagnostics
+    # WARNING: lights state will not be available in real life, use only for diagnostics
     def traffic_cb(self, msg):
         self.lights = msg.lights
 
@@ -117,16 +120,88 @@ class TLDetector(object):
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
 
+    # WARNING! ROSBAG testing version - Use only in site mode
+    # WARNING! If using this function, comment out function of same name below
+    # def detected_bb_cb(self, msg):
+    #     # Clear the list
+    #     self.TL_BB_list = []
+    #     for bb in msg.bounding_boxes:
+    #         # Bounding Box class should be 'traffic light' with probability >= 40%
+    #         if str(bb.Class) == 'traffic light' and bb.probability >= 0.40:
+    #             # Get the camera image
+    #             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+    #             # Crop image
+    #             bb_image = cv_image[bb.ymin:bb.ymax, bb.xmin:bb.xmax]
+    #             # Get height and width
+    #             height, width, channels = bb_image.shape
 
+    #             # Partition into Red, Yellow and Green Areas
+    #             red_area = bb_image[0:height//3, 0:width]
+    #             yellow_area = bb_image[height//3: 2*height//3, 0:width]
+    #             green_area = bb_image[2*height//3: height, 0:width]
+
+    #             #bb_image = cv2.cvtColor(bb_image, cv2.COLOR_BGR2GRAY)
+    #             # Standard Gray conversion, coefficients = [0.114, 0.587, 0.299] (bgr)
+    #             coefficients_red = [0.1, 0.1, 0.8]
+    #             coefficients_yellow = [0.114, 0.587, 0.299]
+    #             coefficients_green = [0.1, 0.8, 0.1]
+
+    #             red_area = cv2.transform(red_area, np.array(coefficients_red).reshape((1,3)))
+    #             yellow_area = cv2.transform(yellow_area, np.array(coefficients_yellow).reshape((1,3)))
+    #             green_area = cv2.transform(green_area, np.array(coefficients_green).reshape((1,3)))
+                
+    #             # Patch the image back
+    #             bb_image = np.concatenate((red_area,yellow_area,green_area),axis=0)
+    #             # Get height and width values again (just to be sure interger division didn't eat up some values)
+    #             height, width = bb_image.shape
+
+    #             # Create mask 
+    #             mask = np.zeros((height, width), np.uint8)
+    #             width_offset = 3
+    #             height_offset = 3
+    #             cv2.ellipse(mask, (width//2, 1*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+    #             cv2.ellipse(mask, (width//2, 3*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+    #             cv2.ellipse(mask, (width//2, 5*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+
+    #             # Apply mask
+    #             bb_image = np.multiply(bb_image, mask)
+
+    #             # Threhold the grayscale image
+    #             bb_image = cv2.inRange(bb_image, 210, 255)
+
+    #             # Partition into Red, Yellow and Green Areas
+    #             red_area = bb_image[0:height//3, 0:width]
+    #             yellow_area = bb_image[height//3: 2*height//3, 0:width]
+    #             green_area = bb_image[2*height//3: height, 0:width]
+
+    #             red_count = cv2.countNonZero(red_area)
+    #             yellow_count = cv2.countNonZero(yellow_area)
+    #             green_count = cv2.countNonZero(green_area)
+
+    #             # Publish the image
+    #             self.cropped_tl_bb_pub.publish(self.bridge.cv2_to_imgmsg(bb_image, "mono8"))
+
+    #             #print (red_count, yellow_count, green_count)
+    #             if red_count > yellow_count and red_count > green_count:
+    #                 print ('Red Light Detected!')
+    #             elif yellow_count > red_count and yellow_count > green_count:
+    #                 print ('Yellow Light Detected!')
+    #             elif green_count > red_count and green_count > yellow_count:
+    #                 print ('Green Light Detected!')
+    #             else:
+    #                 print ('Warning! Unable to determine Light state')
+
+
+    # Simulator Version
     # Important function
     def detected_bb_cb(self, msg):
         # Clear the list
         self.TL_BB_list = []
         for bb in msg.bounding_boxes:
             # Bounding Box class should be 'traffic light' with probability >= 85%
-            if str(bb.Class) == 'traffic light' and bb.probability >= 0.85:
+            if str(bb.Class) == 'traffic light' and bb.probability >= 0.65:
                 # If diagonal size of bounding box is more than 85px
-                if math.sqrt((bb.xmin - bb.xmax)**2 + (bb.ymin - bb.ymax)**2) >= 85.0:
+                if math.sqrt((bb.xmin - bb.xmax)**2 + (bb.ymin - bb.ymax)**2) >= 80.0:
                     self.TL_BB_list.append(bb)
 
 

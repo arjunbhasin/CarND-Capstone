@@ -18,6 +18,9 @@
     <!--Traffic Light Detector Node -->
     <include file="$(find tl_detector)/launch/tl_detector_site.launch"/>
 
+    <!--DarkNet ROS Node -->
+    <include file="$(find darknet_ros)/launch/yolo_v3.launch"/>
+
     <!--Camera Calibration YAML -->
     <param name="grasshopper_calibration_yaml" textfile="$(find styx)../../../data/grasshopper_calibration.yml" />
 
