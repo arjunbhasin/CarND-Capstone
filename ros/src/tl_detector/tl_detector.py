@@ -54,11 +54,15 @@ class TLDetector(object):
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
+        # Get simulator_mode parameter (1== ON, 0==OFF)
+        self.simulator_mode = rospy.get_param("/simulator_mode")
+
         # Publish the index of the waypoint where we have to stop
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         # WARNING! Only use during testing in site mode (for diagnostics)
-        #self.cropped_tl_bb_pub = rospy.Publisher('/cropped_bb', Image, queue_size=1)
+        if int(self.simulator_mode) == 0:
+            self.cropped_tl_bb_pub = rospy.Publisher('/cropped_bb', Image, queue_size=1)
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -127,7 +131,7 @@ class TLDetector(object):
     #     self.TL_BB_list = []
     #     for bb in msg.bounding_boxes:
     #         # Bounding Box class should be 'traffic light' with probability >= 40%
-    #         if str(bb.Class) == 'traffic light' and bb.probability >= 0.40:
+    #         if str(bb.Class) == 'traffic light' and bb.probability >= 0.50:
     #             # Get the camera image
     #             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
     #             # Crop image
@@ -158,7 +162,7 @@ class TLDetector(object):
     #             # Create mask 
     #             mask = np.zeros((height, width), np.uint8)
     #             width_offset = 3
-    #             height_offset = 3
+    #             height_offset = 4
     #             cv2.ellipse(mask, (width//2, 1*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
     #             cv2.ellipse(mask, (width//2, 3*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
     #             cv2.ellipse(mask, (width//2, 5*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
@@ -192,16 +196,33 @@ class TLDetector(object):
     #                 print ('Warning! Unable to determine Light state')
 
 
-    # Simulator Version
-    # Important function
+    # # Simulator Version
+    # # Important function
     def detected_bb_cb(self, msg):
         # Clear the list
         self.TL_BB_list = []
+
+        # Parameters: Diagnonal size thresholds
+        simulator_bb_size_threshold = 85 #px
+        site_bb_size_threshold = 40 #px
+        # min probability of detection
+        simulator_bb_probability = 0.85
+        site_bb_probability = 0.50
+
+        if int(self.simulator_mode) == 1:
+            prob_thresh = simulator_bb_probability
+            size_thresh = simulator_bb_size_threshold
+        else:
+            prob_thresh = site_bb_probability
+            size_thresh = site_bb_size_threshold
+
         for bb in msg.bounding_boxes:
-            # Bounding Box class should be 'traffic light' with probability >= 85%
-            if str(bb.Class) == 'traffic light' and bb.probability >= 0.65:
-                # If diagonal size of bounding box is more than 85px
-                if math.sqrt((bb.xmin - bb.xmax)**2 + (bb.ymin - bb.ymax)**2) >= 80.0:
+            # Simulator mode: Bounding Box class should be 'traffic light' with probability >= 85%
+            # Site Mode: Bounding Box class should be 'traffic light' with probability >= 65%
+            if str(bb.Class) == 'traffic light' and bb.probability >= prob_thresh:
+                # Simulator mode: If diagonal size of bounding box is more than 85px
+                # Site mode: If diagonal size of bounding box is more than 80px
+                if math.sqrt((bb.xmin - bb.xmax)**2 + (bb.ymin - bb.ymax)**2) >= size_thresh:
                     self.TL_BB_list.append(bb)
 
 
@@ -231,7 +252,7 @@ class TLDetector(object):
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
         #Get classification
-        return self.light_classifier.get_classification(cv_image, self.TL_BB_list)
+        return self.light_classifier.get_classification(cv_image, self.TL_BB_list, self.simulator_mode)
 
         
 
