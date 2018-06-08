@@ -15,6 +15,82 @@ class TLClassifier(object):
         self.cropped_tl_bb_pub = rospy.Publisher('/cropped_bb', Image, queue_size=1)
         self.bridge = CvBridge()
 
+    # Return state of light in BB image
+    #*****************************Works well on site video...Okayish on Simulator**********************************
+    def detect_light_state(self, bb_image):
+        # Get height and width
+        height, width, channels = bb_image.shape
+        # Draw partition lines
+        #cv2.line(bb_image, (0, height//3), (width, height//3), (0,0,0), 1)
+        #cv2.line(bb_image, (0, 2*height//3), (width, 2*height//3), (0,0,0), 1)
+
+        # Partition into Red, Yellow and Green Areas
+        red_area = bb_image[0:height//3, 0:width]
+        yellow_area = bb_image[height//3: 2*height//3, 0:width]
+        green_area = bb_image[2*height//3: height, 0:width]
+
+        # We boost individual channel values, i.e., Red is boosted in Red Area, Green is boosted in Green Area
+        # Standard Gray conversion, coefficients = [0.114, 0.587, 0.299] (bgr)
+        coefficients_red = [0.1, 0.1, 0.8]
+        coefficients_yellow = [0.114, 0.587, 0.299]
+        coefficients_green = [0.1, 0.8, 0.1]
+
+        # Apply co-efficients to get grayscale image
+        red_area = cv2.transform(red_area, np.array(coefficients_red).reshape((1,3)))
+        yellow_area = cv2.transform(yellow_area, np.array(coefficients_yellow).reshape((1,3)))
+        green_area = cv2.transform(green_area, np.array(coefficients_green).reshape((1,3)))
+        
+        # Patch the image back (Note image is now in grayscale)
+        bb_image = np.concatenate((red_area,yellow_area,green_area),axis=0)
+
+        # Get height and width values again (just to be sure interger division didn't eat up some values)
+        height, width = bb_image.shape
+
+        # Create mask 
+        mask = np.zeros((height, width), np.uint8)
+        # Can play around with offset
+        width_offset = 3
+        height_offset = 4
+        cv2.ellipse(mask, (width//2, 1*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+        cv2.ellipse(mask, (width//2, 3*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+        cv2.ellipse(mask, (width//2, 5*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
+
+        # Apply mask
+        bb_image = np.multiply(bb_image, mask)
+
+        # Threhold the grayscale image
+        bb_image = cv2.inRange(bb_image, 210, 255)
+
+        # Partition into Red, Yellow and Green Areas
+        red_area = bb_image[0:height//3, 0:width]
+        yellow_area = bb_image[height//3: 2*height//3, 0:width]
+        green_area = bb_image[2*height//3: height, 0:width]
+
+        red_count = cv2.countNonZero(red_area)
+        yellow_count = cv2.countNonZero(yellow_area)
+        green_count = cv2.countNonZero(green_area)
+
+        # Publish the image for diagnostics
+        self.cropped_tl_bb_pub.publish(self.bridge.cv2_to_imgmsg(bb_image, "mono8"))
+
+        # Default state is unknown
+        state = TrafficLight.UNKNOWN
+
+        if red_count > yellow_count and red_count > green_count:
+            print ('Red Light Detected!')
+            state = TrafficLight.RED
+        elif yellow_count > red_count and yellow_count > green_count:
+            print ('Yellow Light Detected!')
+            state = TrafficLight.YELLOW
+        elif green_count > red_count and green_count > yellow_count:
+            print ('Green Light Detected!')
+            state = TrafficLight.GREEN
+        else:
+            print ('Warning! Unable to determine Light state')
+        
+        return state
+
+
     def get_classification(self, image, TL_BB_list, simulator_mode):
         """Determines the color of the traffic light in the image
 
@@ -57,7 +133,7 @@ class TLClassifier(object):
                 # Green color range
                 frame_threshed_green = cv2.inRange(hsv_bb_img, (90.0/360*255, 100, 100), (140.0/360*255, 255, 255)) 
 
-                # Publish the image (for diagnostics)
+                # Publish the HSV image (for diagnostics)
                 self.cropped_tl_bb_pub.publish(self.bridge.cv2_to_imgmsg(hsv_bb_img, "bgr8"))
                
                 # If more than a certain number of pixels are red
@@ -78,71 +154,6 @@ class TLClassifier(object):
 
             # Running in site mode
             else:
-                #*****************************Works well on site video...Okayish on Simulator**********************************
-                # Get height and width
-                height, width, channels = bb_image.shape
-                # Draw partition lines
-                #cv2.line(bb_image, (0, height//3), (width, height//3), (0,0,0), 1)
-                #cv2.line(bb_image, (0, 2*height//3), (width, 2*height//3), (0,0,0), 1)
+                return self.detect_light_state(bb_image)
 
-                # Partition into Red, Yellow and Green Areas
-                red_area = bb_image[0:height//3, 0:width]
-                yellow_area = bb_image[height//3: 2*height//3, 0:width]
-                green_area = bb_image[2*height//3: height, 0:width]
-
-                # We boost individual channel values, i.e., Red is boosted in Red Area, Green is boosted in Green Area
-                # Standard Gray conversion, coefficients = [0.114, 0.587, 0.299] (bgr)
-                coefficients_red = [0.1, 0.1, 0.8]
-                coefficients_yellow = [0.114, 0.587, 0.299]
-                coefficients_green = [0.1, 0.8, 0.1]
-
-                # Apply co-efficients to get grayscale image
-                red_area = cv2.transform(red_area, np.array(coefficients_red).reshape((1,3)))
-                yellow_area = cv2.transform(yellow_area, np.array(coefficients_yellow).reshape((1,3)))
-                green_area = cv2.transform(green_area, np.array(coefficients_green).reshape((1,3)))
                 
-                # Patch the image back (Note image is now in grayscale)
-                bb_image = np.concatenate((red_area,yellow_area,green_area),axis=0)
-
-                # Get height and width values again (just to be sure interger division didn't eat up some values)
-                height, width = bb_image.shape
-
-                # Create mask 
-                mask = np.zeros((height, width), np.uint8)
-                # Can play around with offset
-                width_offset = 3
-                height_offset = 4
-                cv2.ellipse(mask, (width//2, 1*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-                cv2.ellipse(mask, (width//2, 3*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-                cv2.ellipse(mask, (width//2, 5*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-
-                # Apply mask
-                bb_image = np.multiply(bb_image, mask)
-
-                # Threhold the grayscale image
-                bb_image = cv2.inRange(bb_image, 210, 255)
-
-                # Partition into Red, Yellow and Green Areas
-                red_area = bb_image[0:height//3, 0:width]
-                yellow_area = bb_image[height//3: 2*height//3, 0:width]
-                green_area = bb_image[2*height//3: height, 0:width]
-
-                red_count = cv2.countNonZero(red_area)
-                yellow_count = cv2.countNonZero(yellow_area)
-                green_count = cv2.countNonZero(green_area)
-
-                # Publish the image
-                self.cropped_tl_bb_pub.publish(self.bridge.cv2_to_imgmsg(bb_image, "mono8"))
-
-                if red_count > yellow_count and red_count > green_count:
-                    print ('Red Light Detected!')
-                    return TrafficLight.RED
-                elif yellow_count > red_count and yellow_count > green_count:
-                    print ('Yellow Light Detected!')
-                    return TrafficLight.YELLOW
-                elif green_count > red_count and green_count > yellow_count:
-                    print ('Green Light Detected!')
-                    return TrafficLight.GREEN
-                else:
-                    print ('Warning! Unable to determine Light state')
-                    return TrafficLight.UNKNOWN

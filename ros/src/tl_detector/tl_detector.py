@@ -124,77 +124,6 @@ class TLDetector(object):
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
 
-    # # WARNING! ROSBAG testing version - Use only in site mode
-    # # WARNING! If using this function, comment out function of same name below
-    # def detected_bb_cb(self, msg):
-    #     # Clear the list
-    #     self.TL_BB_list = []
-    #     for bb in msg.bounding_boxes:
-    #         # Bounding Box class should be 'traffic light' with probability >= 40%
-    #         if str(bb.Class) == 'traffic light' and bb.probability >= 0.50:
-    #             # Get the camera image
-    #             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-    #             # Crop image
-    #             bb_image = cv_image[bb.ymin:bb.ymax, bb.xmin:bb.xmax]
-    #             # Get height and width
-    #             height, width, channels = bb_image.shape
-
-    #             # Partition into Red, Yellow and Green Areas
-    #             red_area = bb_image[0:height//3, 0:width]
-    #             yellow_area = bb_image[height//3: 2*height//3, 0:width]
-    #             green_area = bb_image[2*height//3: height, 0:width]
-
-    #             #bb_image = cv2.cvtColor(bb_image, cv2.COLOR_BGR2GRAY)
-    #             # Standard Gray conversion, coefficients = [0.114, 0.587, 0.299] (bgr)
-    #             coefficients_red = [0.1, 0.1, 0.8]
-    #             coefficients_yellow = [0.114, 0.587, 0.299]
-    #             coefficients_green = [0.1, 0.8, 0.1]
-
-    #             red_area = cv2.transform(red_area, np.array(coefficients_red).reshape((1,3)))
-    #             yellow_area = cv2.transform(yellow_area, np.array(coefficients_yellow).reshape((1,3)))
-    #             green_area = cv2.transform(green_area, np.array(coefficients_green).reshape((1,3)))
-                
-    #             # Patch the image back
-    #             bb_image = np.concatenate((red_area,yellow_area,green_area),axis=0)
-    #             # Get height and width values again (just to be sure interger division didn't eat up some values)
-    #             height, width = bb_image.shape
-
-    #             # Create mask 
-    #             mask = np.zeros((height, width), np.uint8)
-    #             width_offset = 3
-    #             height_offset = 4
-    #             cv2.ellipse(mask, (width//2, 1*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-    #             cv2.ellipse(mask, (width//2, 3*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-    #             cv2.ellipse(mask, (width//2, 5*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-
-    #             # Apply mask
-    #             bb_image = np.multiply(bb_image, mask)
-
-    #             # Threhold the grayscale image
-    #             bb_image = cv2.inRange(bb_image, 210, 255)
-
-    #             # Partition into Red, Yellow and Green Areas
-    #             red_area = bb_image[0:height//3, 0:width]
-    #             yellow_area = bb_image[height//3: 2*height//3, 0:width]
-    #             green_area = bb_image[2*height//3: height, 0:width]
-
-    #             red_count = cv2.countNonZero(red_area)
-    #             yellow_count = cv2.countNonZero(yellow_area)
-    #             green_count = cv2.countNonZero(green_area)
-
-    #             # Publish the image
-    #             self.cropped_tl_bb_pub.publish(self.bridge.cv2_to_imgmsg(bb_image, "mono8"))
-
-    #             #print (red_count, yellow_count, green_count)
-    #             if red_count > yellow_count and red_count > green_count:
-    #                 print ('Red Light Detected!')
-    #             elif yellow_count > red_count and yellow_count > green_count:
-    #                 print ('Yellow Light Detected!')
-    #             elif green_count > red_count and green_count > yellow_count:
-    #                 print ('Green Light Detected!')
-    #             else:
-    #                 print ('Warning! Unable to determine Light state')
-
 
     # Simulator Version
     # Important function
@@ -207,7 +136,7 @@ class TLDetector(object):
         site_bb_size_threshold = 40 #px
         # min probability of detection
         simulator_bb_probability = 0.85
-        site_bb_probability = 0.50
+        site_bb_probability = 0.25
 
         if int(self.simulator_mode) == 1:
             prob_thresh = simulator_bb_probability
@@ -218,7 +147,7 @@ class TLDetector(object):
 
         for bb in msg.bounding_boxes:
             # Simulator mode: Bounding Box class should be 'traffic light' with probability >= 85%
-            # Site Mode: Bounding Box class should be 'traffic light' with probability >= 65%
+            # Site Mode: Bounding Box class should be 'traffic light' with probability >= 25%
             if str(bb.Class) == 'traffic light' and bb.probability >= prob_thresh:
                 # Simulator mode: If diagonal size of bounding box is more than 85px
                 # Site mode: If diagonal size of bounding box is more than 80px
@@ -235,64 +164,7 @@ class TLDetector(object):
                         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
                         # Crop image
                         bb_image = cv_image[bb.ymin:bb.ymax, bb.xmin:bb.xmax]
-                        # Get height and width
-                        height, width, channels = bb_image.shape
-
-                        # Partition into Red, Yellow and Green Areas
-                        red_area = bb_image[0:height//3, 0:width]
-                        yellow_area = bb_image[height//3: 2*height//3, 0:width]
-                        green_area = bb_image[2*height//3: height, 0:width]
-
-                        # We boost individual channel values, i.e., Red is boosted in Red Area, Green is boosted in Green Area
-                        # Standard Gray conversion, coefficients = [0.114, 0.587, 0.299] (bgr)
-                        coefficients_red = [0.1, 0.1, 0.8]
-                        coefficients_yellow = [0.114, 0.587, 0.299]
-                        coefficients_green = [0.1, 0.8, 0.1]
-
-                        red_area = cv2.transform(red_area, np.array(coefficients_red).reshape((1,3)))
-                        yellow_area = cv2.transform(yellow_area, np.array(coefficients_yellow).reshape((1,3)))
-                        green_area = cv2.transform(green_area, np.array(coefficients_green).reshape((1,3)))
-                        
-                        # Patch the image back
-                        bb_image = np.concatenate((red_area,yellow_area,green_area),axis=0)
-                        # Get height and width values again (just to be sure interger division didn't eat up some values)
-                        height, width = bb_image.shape
-
-                        # Create mask 
-                        mask = np.zeros((height, width), np.uint8)
-                        width_offset = 3
-                        height_offset = 4
-                        cv2.ellipse(mask, (width//2, 1*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-                        cv2.ellipse(mask, (width//2, 3*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-                        cv2.ellipse(mask, (width//2, 5*height//6), (width//2 - width_offset, height//6 - height_offset), 0, 0, 360, 1, -1)
-
-                        # Apply mask
-                        bb_image = np.multiply(bb_image, mask)
-
-                        # Threhold the grayscale image
-                        bb_image = cv2.inRange(bb_image, 210, 255)
-
-                        # Partition into Red, Yellow and Green Areas
-                        red_area = bb_image[0:height//3, 0:width]
-                        yellow_area = bb_image[height//3: 2*height//3, 0:width]
-                        green_area = bb_image[2*height//3: height, 0:width]
-
-                        red_count = cv2.countNonZero(red_area)
-                        yellow_count = cv2.countNonZero(yellow_area)
-                        green_count = cv2.countNonZero(green_area)
-
-                        # Publish the image
-                        self.cropped_tl_bb_pub.publish(self.bridge.cv2_to_imgmsg(bb_image, "mono8"))
-
-                        #print (red_count, yellow_count, green_count)
-                        if red_count > yellow_count and red_count > green_count:
-                            print ('Red Light Detected!')
-                        elif yellow_count > red_count and yellow_count > green_count:
-                            print ('Yellow Light Detected!')
-                        elif green_count > red_count and green_count > yellow_count:
-                            print ('Green Light Detected!')
-                        else:
-                            print ('Warning! Unable to determine Light state')
+                        self.light_classifier.detect_light_state(bb_image)
 
 
     # Similar to function in waypoint_update.py
