@@ -45,7 +45,6 @@ class TLClassifier(object):
             # Check if running in simulator mode
             if int(simulator_mode) == 1:
                 #**********************************************Only works in Simulator, Not on site********************************
-                #****************************************If using this section, comment out all code below this section************
                 # Convert to HSV
                 hsv_bb_img = cv2.cvtColor(bb_image, cv2.COLOR_BGR2HSV)
 
