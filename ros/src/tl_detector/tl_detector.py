@@ -125,12 +125,10 @@ class TLDetector(object):
         self.state_count += 1
 
 
-    # Simulator Version
     # Important function
     def detected_bb_cb(self, msg):
         # Clear the list
         self.TL_BB_list = []
-
         # Parameters: Diagnonal size thresholds
         simulator_bb_size_threshold = 85 #px
         site_bb_size_threshold = 40 #px
@@ -156,7 +154,6 @@ class TLDetector(object):
 
                     # if running in site mode/ROS bag mode
                     if int(self.simulator_mode) == 0:
-
                         '''The ROS bag version only has video data. Hence no waypoints are loaded and get light function is not called.
                             So to check detection in ROS bag video, we do TL state classification here itself.
                         '''
@@ -189,15 +186,11 @@ class TLDetector(object):
         if(not self.has_image):
             self.prev_light_loc = None
             return False
-
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-
         #Get classification
         return self.light_classifier.get_classification(cv_image, self.TL_BB_list, self.simulator_mode)
 
         
-
-
     # Important function
     """Finds closest visible traffic light, if one exists, and determines its
             location and color
@@ -217,7 +210,7 @@ class TLDetector(object):
         if(self.pose):
             # waypoint closest to current car pose
             car_wp_idx = self.get_closest_waypoint(self.pose.pose.position.x, self.pose.pose.position.y)
-
+            # total number of waypoints
             diff = len(self.waypoints.waypoints)
 
             for i, light in enumerate(self.lights):
@@ -226,7 +219,7 @@ class TLDetector(object):
 
                 d = temp_wp_idx - car_wp_idx
 
-                if d >=0 and d < diff:
+                if d >= 0 and d < diff:
                     diff = d
                     closest_light = light
                     line_wp_idx = temp_wp_idx
@@ -243,3 +236,4 @@ if __name__ == '__main__':
         TLDetector()
     except rospy.ROSInterruptException:
         rospy.logerr('Could not start traffic node.')
+

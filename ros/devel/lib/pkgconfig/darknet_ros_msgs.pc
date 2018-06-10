@@ -1,8 +1,0 @@
-prefix=/home/arjun/workspace/SelfDrivingCars/CarND-Capstone/ros/devel
-
-Name: darknet_ros_msgs
-Description: Description of darknet_ros_msgs
-Version: 1.1.3
-Cflags: -I/home/arjun/workspace/SelfDrivingCars/CarND-Capstone/ros/devel/include
-Libs: -L/home/arjun/workspace/SelfDrivingCars/CarND-Capstone/ros/devel/lib 
-Requires: actionlib_msgs geometry_msgs sensor_msgs message_runtime std_msgs

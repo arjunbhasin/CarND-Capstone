@@ -1,8 +1,0 @@
-prefix=/home/arjun/workspace/SelfDrivingCars/CarND-Capstone/ros/install
-
-Name: styx
-Description: Description of styx
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/arjun/workspace/SelfDrivingCars/CarND-Capstone/ros/install/lib 
-Requires: 

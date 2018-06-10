@@ -7,9 +7,7 @@ from cv_bridge import CvBridge
 
 
 class TLClassifier(object):
-    def __init__(self):
-        #TODO load classifier
-        
+    def __init__(self): 
         # For Diagnostics
         # Publish cropped TL bounding box
         self.cropped_tl_bb_pub = rospy.Publisher('/cropped_bb', Image, queue_size=1)
@@ -20,10 +18,6 @@ class TLClassifier(object):
     def detect_light_state(self, bb_image):
         # Get height and width
         height, width, channels = bb_image.shape
-        # Draw partition lines
-        #cv2.line(bb_image, (0, height//3), (width, height//3), (0,0,0), 1)
-        #cv2.line(bb_image, (0, 2*height//3), (width, 2*height//3), (0,0,0), 1)
-
         # Partition into Red, Yellow and Green Areas
         red_area = bb_image[0:height//3, 0:width]
         yellow_area = bb_image[height//3: 2*height//3, 0:width]
@@ -65,7 +59,7 @@ class TLClassifier(object):
         red_area = bb_image[0:height//3, 0:width]
         yellow_area = bb_image[height//3: 2*height//3, 0:width]
         green_area = bb_image[2*height//3: height, 0:width]
-
+	# Count the number of non-zero pixels
         red_count = cv2.countNonZero(red_area)
         yellow_count = cv2.countNonZero(yellow_area)
         green_count = cv2.countNonZero(green_area)
@@ -75,7 +69,7 @@ class TLClassifier(object):
 
         # Default state is unknown
         state = TrafficLight.UNKNOWN
-
+	# Determine which color had max non-zero pixels
         if red_count > yellow_count and red_count > green_count:
             print ('Red Light Detected!')
             state = TrafficLight.RED
@@ -102,8 +96,6 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        #TODO implement light color prediction
-
         # if list is empty, return UNKNOWN
         if not TL_BB_list:
             return TrafficLight.UNKNOWN
