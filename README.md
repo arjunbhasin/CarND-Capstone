@@ -5,11 +5,11 @@ This is the project repo for the final project of the Udacity Self-Driving Car N
 
 | Team RunCarla              
 |:-----------------
-| Shridhar Rasal ()
-| Arjun Bhasin (arjunbhasin.pec@gmail.com) 
-| Swapnil More ()
-| Manish Ramaswamy () 
-| Wilson Fong ()
+| Shridhar Rasal
+| Arjun Bhasin 
+| Swapnil More
+| Manish Ramaswamy
+| Wilson Fong
 
 
 ## Introduction
